@@ -1,0 +1,11 @@
+#	Executable
+game
+
+#	Object files
+*.o
+
+#	GHC generated files
+*.hi
+
+#	Temporary files
+*.swp
