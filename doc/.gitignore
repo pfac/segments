@@ -1,0 +1,21 @@
+#	System files
+.DS_Store
+
+#	Temporary files
+*.swp
+*.swo
+*.tmp
+
+#	LaTeX generated files
+*.out
+*.pdf
+*.dvi
+*.synctex.gz
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.bbl
+*.blg
+

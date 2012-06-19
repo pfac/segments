@@ -1,0 +1,2050 @@
+\documentclass[a4paper,titlepage]{scrreprt}
+
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\usepackage{multicol}
+\usepackage{relsize}
+
+% Capa
+\title{Segmentos}
+%\\LEI, 1º ano}
+\subject{Laboratórios de Informática I}
+
+\author{André Teixeira\\\texttt{\smaller a54753}
+\and Fábio Morais\\\texttt{\smaller a54815}
+\and Pedro Costa\\\texttt{\smaller a54736}}
+
+\date{Braga, Dezembro 2008}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+	\section{Introdução}
+	O relatório que está a ser introduzido tem como base a realização de um trabalho que consta do programa da disciplina
+	de Laboratórios de Informática, e tem como objectivo a elaboração de um programa em Haskell (linguagem de programação
+	que será também abordada) que desempenha funções relacionadas com um jogo chamado ``Segmentos'' semelhante ao conhecido
+	jogo ``Quatro em Linha'', mas com algumas diferenças nomeadamente nas pontuações e no limite do jogo. A produção do trabalho
+	acima referido é de extrema importância uma vez que este representa 50\% da nota final a esta disciplina, pretendemos
+	portanto elaborar um trabalho completo e de acordo com o enunciado fornecido pela docente.
+	
+	Nos capítulos seguintes será descrito todo o projecto desenvolvido, bem como as principais funções que o constituem.\footnote{As
+	demonstrações do código das funções destinam-se somente a mostrar o método utilizado para resolver determinado problema. Muitas
+	vezes, devido a dificuldade de leitura, o código nestas demonstrações é adulterado, quer seja por alinhamento ou por adicionar
+	\{ ou \} para mostrar agrupamentos (que de outra forma poderiam não ser evidentes). Para verificar o código exacto, consultar o
+	anexo.}
+	\section{Enquadramento}
+		\subsection{Haskell, programação funcional}
+		Do ponto de vista dos programadores, o controlo sobre a máquina está sempre associado a uma linguagem de programação
+		de baixo nível, enquanto que a facilidade de programar associa-se às linguagens de alto nível. O paradigma funcional
+		revela-se nas linguagens de alto nível, dando ao programador a possibilidade de programar rápida e eficazmente com
+		um número de linhas relativamente pequeno em relação a uma linguagem imperativa - cerca de um quinto do tempo na
+		produção do código. Haskell é uma linguagem puramente funcional, conhecida por ser fortemente tipada, muito rápida,
+		concisa, fácil de ler e muito fiável. Daí ser muito utilizada para alguns propósitos, especialmente no ambiente Académico.
+\chapter{Descrição do problema}
+O exercício proposto tem algumas semelhanças com o jogo de 4-em-linha, onde 2 jogadores, com um tabuleiro $n\times m$ vertical, e
+jogando alternadamente, tentam obter uma linha de 4 peças iguais. Em cada jogada, o jogador pode colocar uma das suas peças
+numa coluna não cheia. A posição dessa coluna que é ocupada é a seguinte à última que foi ocupada. Uma linha pode ser obtida
+horizontalmente, verticalmente ou na diagonal.
+
+O trabalho propriamente dito, é uma variante deste jogo denominada ``Segmentos''. Embora também se jogue num tabuleiro n$x$m
+vertical, tem algumas diferenças, nomeadamente em termos de pontuação, uma vez que o jogador não vence quando chegar as 4 peças
+consecutivas; em vez disso, joga-se ate ao tabuleiro de jogo estar completamente preenchido. Depois de atribuída a pontuação, de
+acordo com uma tabela representada ao lado, ganha o jogador que obtiver maior pontuação.
+
+No enunciado facultado pela docente, foi apresentada uma lista de tarefas a realizar para que a produção do programa decorresse
+de forma organizada e sequencial, bem como vários extras que embora não sejam obrigatórios aumentam a nota final no caso de
+serem realizados correctamente. Estas tarefas serão apresentadas nos seguintes capítulos, bem como os algoritmos e funções que
+respondem a estas.
+\chapter{Estruturas de Dados}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 1\\
+			Comece por definir tipos apropriados para representar tabuleiros e jogadas. Defina o tipo dos tabuleiros como
+			instância de classes que julgue apropriadas (por exemplo, Show).
+			}
+		\end{center}
+	\end{quote}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Extra 1\\
+			Estender o jogo para dar aos jogadores a possibilidade de escolher, previamente, a
+			dimensão do tabuleiro e/ou a tabela de cotações\footnote{Não foi incluido neste projecto a opção de definir previamente
+			uma tabela de cotações devido aos limites máximos de um tabuleiro, sendo que o utilizador teria de definir um valor para
+			cada comprimento possivel de segmentos (que pode chegar a 99).}
+			}
+		\end{center}
+	\end{quote}
+Para uma manipulação e compreensão mais facilitada dos tabuleiros de jogo, considerou-se a criação de dois tipos de dados novos,
+nomeadamente Tabuleiro e Jogada. Foram ainda criados diversos sinónimos de tipos de modo a facilitar a leitura e escrita de
+código.
+	\begin{quote}
+			{\tt
+			type Jogador = Bool\\
+			type Coluna = [Jogador]\\
+			type Conteudo = [Coluna]\\
+			\newline
+			data Tabuleiro = TAB (Int,Int) Conteudo\\
+			data Jogada = JOG Jogador Int\\
+			}
+	\end{quote}
+	\section{Sinónimos}
+		\begin{quote}
+			{\tt
+			type Jogador = Bool\\
+			type Coluna = [Jogador]\\
+			type Conteudo = [Coluna]\\
+			}
+		\end{quote}
+		De modo a facilitar a leitura do código, os tipos de dados mais importantes foram traduzidos em sinónimos.
+		
+		\begin{description}
+			\item[Jogador] representa as peças dos jogadores utilizadas para preencher o tabuleiro. Sendo uma das características
+			do jogo que, numa coluna, nunca se encontre um espaço vazio entre duas peças, torna-se desnecessário definir um novo
+			tipo de dados que consiga representar um espaço vazio.
+			
+			Desta forma, o tipo {\tt Bool} mostra-se adequado para representar a peça de um jogador ({\it True} para o jogador 1,
+			{\it False} para o jogador 2).
+			\item[Coluna] é uma lista constituída apenas por peças dos jogadores ({\tt Jogador}). Os valores da lista, da esquerda
+			para a direita, correspondem às peças na coluna, de baixo para cima.
+			\item[Conteudo] corresponde à matriz que contém as colunas que formam o tabuleiro.
+		\end{description}
+	\section{Tabuleiro}
+		\begin{quote}
+			{\small - - TAB (Linhas,Colunas) Conteudo}\\
+			{\tt data Tabuleiro = TAB (Int,Int) Conteudo}
+		\end{quote}
+		Para construir os tabuleiro para este jogo foi necessário considerar os dois factores que os constituem: a sua dimensão e
+		o seu conteudo. É então necessário que estas duas informações estejam associadas na definição do tabuleiro.
+		
+		A dimensão de um tabuleiro é definida no primeiro valor do tipo de dados. Sendo este um par de inteiros, o primeiro corres-
+		ponde ao número de linhas, e o segundo ao número de colunas do tabuleiro. Este valor permite então, independentemente do
+		tamanho do conteudo, redefinir e manipular o tamanho do tabuleiro. É permitido ao utilizador definir um tabuleiro com ambas as
+		dimensões entre 1 e 99, inclusive. O projecto responde, desta forma, aos requisitos do {\it Extra 1}.
+		
+		Para este tipo apenas está definida uma instância da classe {\tt Show}, para que o tabuleiro seja desenhado no ecra.
+		\begin{quote}
+			{\tt
+			instance Show Tabuleiro where\\
+			- - show::Tabuleiro->String\\
+			show a = desTab a
+			}
+		\end{quote}
+	\section{Jogador}
+		\begin{quote}
+			{\tt data Jogada = JOG Jogador Int}
+		\end{quote}
+		O tipo Jogada tem como objectivo apenas facilitar a utilização dos valores de uma jogada. É constituída pelo valor do Jogador
+		que efectua a jogada e pelo número da coluna onde esse jogador deseja jogar.
+		
+		Este tipo não tem definida nenhuma instância para nenhuma classe, pois a sua manipulação é feita pelo próprio programa,
+		internamente, não sendo necessário que este esteja associado a nenhuma classe.
+\chapter{Funções de validação}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 2\\
+			Defina funções que testem a validade de um tabuleiro e de uma jogada.
+			}
+		\end{center}
+	\end{quote}
+Em certas fases do código, é necessário testar se um dado valor ou conjunto de valores está de acordo com as regras do jogo ou com as
+características do programa.
+
+	\section{Tabuleiro}
+	Em resposta à tarefa 2 do enunciado, não foi criada nenhuma função de validação de um tabuleiro, no sentido de verificar se este foi
+	correctamente construído, pois essa construção é interna.
+	
+	No entanto, são necessárias funções de validação dos valores utilizados para construir o tabuleiro e da disponibilidade do mesmo.
+		\subsubsection{Dimensões}
+			\begin{quote}
+				{\small - - valida uma dimensão, para que o valor introduzido pelo utilizador seja um valor entre 1 e 99 inclusive\\}
+				{\tt
+				valDim::Int->Bool\\
+				valDim d = (d>0)\&\&(d<100)
+				}
+			\end{quote}
+		\subsubsection{Disponibilidade}
+			\begin{quote}
+				{\small - - recebe um tabuleiro e o número da coluna a testar e devolve True se a coluna não tiver cheia, False se tiver cheia\\}
+				{\tt
+				colDisp::Tabuleiro->Int->Bool\\
+				colDisp (TAB (l,\_) (e:es)) 1 = (length e)<l\\
+				colDisp (TAB (l,c) (e:es)) i = colDisp (TAB (l,c) es) (i-1)
+				}
+			\end{quote}
+			Esta primeira função verifica a disponibilidade de uma determinada coluna. É utilizada nas funções que se seguem.
+			\begin{quote}
+				{\small - - verifica se o tabuleiro está cheio\\}
+				{\tt
+				tabCheio::Tabuleiro->Bool\\
+				tabCheio (TAB (l,1) ct) = not (colDisp (TAB (l,1) ct) 1)\\
+				tabCheio (TAB (l,c) ct) = (not (colDisp (TAB (l,c) ct) c))\&\&\\
+				(tabCheio (TAB (l,c-1) ct))
+				}
+			\end{quote}
+	\section{Jogada}
+		\begin{quote}
+			{\small - - valida a jogada, devolvendo True se esta for válida, False se não for\\}
+			{\tt
+			valJog::Tabuleiro->Jogada->Bool\\
+			valJog (TAB (l,c) ct) (JOG \_ k) = (k<=c)\&\&\\(colDisp (TAB (l,c) ct) k)
+			}
+		\end{quote}
+		A função é validada se a coluna em que o utilizador deseja jogar não exceder o limite do tabuleiro e se essa mesma coluna estiver
+		disponível.
+\chapter{Jogada}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 3\\
+			Defina uma função para efectuar uma jogada (que retornará a próxima configuração do tabuleiro).
+			}
+		\end{center}
+	\end{quote}
+	\begin{quote}
+		{\small - - realiza uma jogada\\}
+		{\tt
+		jogar::Tabuleiro->Jogada->Conteudo->Tabuleiro\\
+		jogar (TAB (l,c) (e:es)) (JOG j 1) ct =\\(TAB (l,c) (ct++((e++[j]):es)))\\
+		jogar (TAB (l,c) (e:es)) (JOG j k) ct =\\jogar (TAB (l,c) es) (JOG j (k-1)) (ct++[e])
+		}
+	\end{quote}
+	Esta função recebe o tabuleiro actual e a jogada a realizar. Utiliza ainda uma lista vazia como acumulador para guardar todo o
+	conteudo até encontrar a coluna pretendida. Encontrando essa coluna, associa o novo valor à primeira coluna do conteudo actual, associando,
+	por sua vez, este ao acumulador. Devolve então o novo tabuleiro com a nova peça na coluna desejada.
+\chapter{Cálculo do resultado}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 4\\
+			Defina uma função que calcule o resultado de um determinado tabuleiro (o número de pontos de cada jogador).
+			}
+		\end{center}
+	\end{quote}
+	A pontuação de um jogador é calculada de acordo com os segmentos obtidos pelas suas jogadas. Ao comprimento de cada segmento corresponde um
+	determinado valor. Este é calculado pela sucessão
+	\begin{eqnarray*}
+		p_0 &=& 0\\
+		p_n &=&(n-1)+p_{n-1}
+	\end{eqnarray*}
+	\begin{quote}
+		{\small - - calcula a pontuação de uma lista de segmentos\\}
+		{\tt
+		pontos::[Int]->Int
+		pontos s = sum(map pontosAux s)
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - associa o número de peças de um segmento à pontuação correspondente.\\}
+		{\tt
+		pontosAux::Int->Int\\
+		pontosAux n = if (n==0) then 0 else (n-1) + pontosAux (n-1)
+		}
+	\end{quote}
+	Então, dada uma lista com comprimentos de segmentos, associa-se a esta lista a pontuação correspondente
+	\begin{quote}
+		{\small - - calcula a pontuação actual do tabuleiro para um determinado jogador\\}
+		{\tt
+		pntTotal::Bool->Tabuleiro->Int\\
+		pntTotal \_ (TAB (1,1) \_) = 0\\
+		pntTotal j t = (pntsD1 j t)+(pntsD2 j t)+\\(pontosColuna j t)+(pontosLinha j t)
+		}
+	\end{quote}
+O cálculo do resultado de um determinado tabuleiro é feito comparando a pontuação dos dois jogadores. A pontuação de um jogador,
+por sua vez, é calculada somando a pontuação correspondente aos seus segmentos horizontais, verticais e diagonais.
+	\section{Pontuação Vertical}
+		\begin{quote}
+			{\small - - constrói uma lista com o número de peças de cada segmento de uma coluna\\}
+			{\tt
+			segCol::Bool->Coluna->Int->[Int]\\
+			segCol \_ [] t = [t]\\
+			segCol j (e:es) t = if (j==e) then (segCol j es (t+1))\\
+			else t:(segCol j es 0)
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - faz a soma dos pontos de todas as colunas\\}
+			{\tt
+			pontosColuna::Bool->Tabuleiro->Int\\
+			pontosColuna \_ (TAB (\_,\_) []) = 0\\
+			pontosColuna j (TAB (l,c) (m:ms)) = pontos(segCol j m 0)\\
+			+ (pontosColuna j (TAB (l,c-1) ms))
+			}
+		\end{quote}
+	O cálculo da pontuação vertical começa por converter a coluna numa lista de inteiros, sendo estes valores o comprimento de cada
+	segmento desse jogador encontrado na coluna. Se for encontrada uma peça desse jogador, o acumulador aumenta; se for encontrada
+	uma peça do outro jogador, é adicionado à lista o valor do acumulador, e este volta a zero.
+	
+	Formada a lista com o comprimento dos segmentos em cada coluna, a pontuação horizontal é calculada utilizando as funções
+	apresentadas acima.
+	\section{Pontuação horizontal}
+		\begin{quote}
+			{\small - - constrói uma lista com o número de peças de cada segmento de uma linha\\}
+			{\tt
+			segLin::Bool->Int->Conteudo->Int->[Int]\\
+			segLin \_ \_ [] t = [t]\\
+			segLin j i (c:cs) t =\\
+			if (j==(toBool (ft(elemXinY i 1 (c:cs))) j))\\
+			then (segLin j i cs (t+1))\\
+			else (t:(segLin j i cs 0))
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - faz a soma dos pontos de todas as linhas\\}
+			{\tt
+			pontosLinha::Bool->Tabuleiro->Int\\
+			pontosLinha j (TAB (l,c) ct)\\
+			| c==1 = pontos(segLin j c ct 0)\\
+            | otherwise = pontos(segLin j c ct 0)\\
+			+ (pontosLinha j (TAB (l,c-1) ct))
+			}
+		\end{quote}
+	Da mesma forma que na pontuação vertical, o cálculo da pontuação horizontal começa por converter cada linha numa lista com o comprimento
+	de cada segmento encontrado. A diferença está em que neste caso é possivel existir um espaço vazio entre duas peças. No entanto, mantém-se
+	a condição: se for uma peça do jogador, aumenta o acumulador; se for uma peça do oponente ou um espaço vazio, adiciona o valor do acumulador
+	à lista e o mesmo volta a zero.
+	
+	O cálculo da pontuação total horizontal é semelhante ao mencionado para a pontuação vertical.
+	\section{Pontuação diagonal}
+	Para a pontuação diagonal, o cálculo é mais complexo, apesar de se apoiar na mesma ideia que as funções anteriores. A complexidade das
+	diagonais reside na existência de dois tipos de diagonais ($\nearrow$ e $\nwarrow$) e na formação das listas com o comprimento dos segmentos.
+		\begin{quote}
+			{\small - - transforma um tabuleiro com comprimento e largura quaisquer num tabuleiro quadrado de ordem igual à maior das duas dimensões\\}
+			{\tt
+			quadTab::Tabuleiro->Tabuleiro\\
+			quadTab (TAB (l,c) ct) =\\
+			if l>c\\
+			then TAB (l,l) (ct++[[]])\\
+			else TAB (c,c) ct
+			}
+		\end{quote}
+	Antes de mais, para este cálculo é necessário tornar as diagonais uniformes. Aqui mostra-se as vantagens das dimensões do tabuleiro estarem
+	associadas ao próprio tabuleiro, tornando possivel aumentar o tabuleiro vertical ou horizontalmente sem afectar de qualquer forma o conteudo.
+	
+	Ambas as diagonais seguem o mesmo algoritmo no cálculo da pontuação, daí que apenas será explicado o primeiro tipo de diagonais, e para o
+	segundo serão apenas mostradas as funções que executam esse mesmo algoritmo.
+		\subsection{Diagonais $\nearrow$}
+			\begin{quote}
+				{\small - - forma o novo tabuleiro juntando a as diagonais à esquerda da diagonal principal do tabuleiro, esta e as diagonais à direita (diagonais $\nearrow$)\\}
+				{\tt
+				diag1::Bool->Tabuleiro->Tabuleiro\\
+				diag1 j (TAB (l,c) ct) =\\
+				let	t = (quadTab (TAB (l,c) ct))\\
+				;	(TAB (n,\_) \_) = t\\
+				;	(TAB (\_,\_) ctEsq) = d1Esq j (remPrimLin (remUltCol t))\\
+				;	(TAB (\_,\_) ctCnt) = d1Cnt j t\\
+				;	(TAB (\_,\_) ctDir) = d1Dir j (remUltLin (remPrimCol t))\\
+				in	TAB (n,(2*n)-1) (ctEsq++ctCnt++ctDir)
+				}
+			\end{quote}
+		A pontuação das diagonais de um tabuleiro é a soma das pontuação da diagonal central e das diagonais à esquerda e à direita desta.
+		Desta forma, torna-se necessário transformar um tabuleiro num segundo cujas colunas são as diagonais do primeiro. Seguem-se então as funções
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujo conteudo é apenas uma coluna com a diagonal central $\nearrow$ do tabuleiro original\\}
+				{\tt
+				d1Cnt::Bool->Tabuleiro->Tabuleiro\\
+				d1Cnt j (TAB (1,1) ct) =\\
+				TAB (1,1) [[(toBool (ft (elemXinY 1 1 ct)) j)]]\\
+				d1Cnt j (TAB (l,c) ct) =\\
+				{\small let	(TAB (\_,\_) (e:es)) =\\d1Cnt j (remPrimLin (remPrimCol (TAB (l,c) ct)))}\\
+				in TAB (l,1) (((toBool (ft (elemXinY 1 1 ct)) j):e):es)
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujas colunas representam as diagonais à esquerda da diagonal $\nearrow$ do tabuleiro inicial\\}
+				{\tt
+				d1Esq::Bool->Tabuleiro->Tabuleiro\\
+				d1Esq j (TAB (1,1) ct) = d1Cnt j (TAB (1,1) ct)\\
+				d1Esq j (TAB (l,c) ct) =\\
+				{\small let	(TAB (\_,\_) nt) = d1Esq j (remPrimLin (remUltCol (TAB (l,c) ct)))\\}
+				;	(TAB (\_,\_) st) = d1Cnt j (TAB (l,c) ct)\\
+				in	(TAB (l,c) (nt++st))
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujas colunas representam as diagonais à direita da diagonal $\nearrow$ do tabuleiro inicial\\}
+				{\tt
+				d1Dir::Bool->Tabuleiro->Tabuleiro\\
+				d1Dir j (TAB (1,1) ct) = d1Cnt j (TAB (1,1) ct)\\
+				d1Dir j (TAB (l,c) ct) =\\
+				{\small let (TAB (\_,\_) nt) = d1Dir j (remUltLin (remPrimCol (TAB (l,c) ct)))}\\
+				;	(TAB (\_,\_) st) = d1Cnt j (TAB (l,c) ct)\\
+				in	(TAB (l,c) (st++nt))
+				}
+			\end{quote}
+			Visto que nas diagonais, é possivel existirem espaços vazios entre as peças, contornou-se este obstáculo atribuindo a cada
+			espaço vazio a peça do jogador contrário, possibilitando assim colocá-la numa coluna de outro tabuleiro.
+			
+			Formado, então, o novo tabuleiro em que as colunas são as diagonais do tabuleiro original, a pontuação das diagonais do tabuleiro
+			original é a pontuação das colunas do novo.
+			\begin{quote}
+				{\small - - calcula a pontuação das diagonais $\nearrow$ de um tabuleiro\\}
+				{\tt
+				pntsD1::Bool->Tabuleiro->Int\\
+				pntsD1 j t = pontosColuna j (diag1 j t)
+				}
+			\end{quote}
+		\subsection{Diagonais $\nwarrow$}
+		Da mesma forma que acima, o cálculo da pontuação destas diagonais faz-se com as funções
+			\begin{quote}
+				{\small - - forma o novo tabuleiro juntando a as diagonais à esquerda da diagonal principal do tabuleiro, esta e as diagonais à direita (diagonais $\nwarrow$)\\}
+				{\tt
+				diag2::Bool->Tabuleiro->Tabuleiro\\
+				diag2 j (TAB (l,c) ct) =\\
+				let	t = (quadTab (TAB (l,c) ct))\\
+				;	(TAB (n,\_) \_) = t\\
+				;	(TAB (\_,\_) ctEsq) = d2Esq j (remUltLin (remUltCol t))\\
+				;	(TAB (\_,\_) ctCnt) = d2Cnt j t\\
+				;	(TAB (\_,\_) ctDir) = d2Dir j (remPrimLin (remPrimCol t))\\
+				in	TAB (n,(2*n)-1) (ctEsq++ctCnt++ctDir)
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujo conteudo é apenas uma coluna com a diagonal central $\nwarrow$ do tabuleiro original\\}
+				{\tt
+				d2Cnt::Bool->Tabuleiro->Tabuleiro\\
+				d2Cnt j (TAB (1,1) ct) =\\
+				TAB (1,1) [[(toBool (ft (elemXinY 1 1 ct)) j)]]\\
+				d2Cnt j (TAB (l,c) ct) =\\
+				{\small let	(TAB (\_,\_) (e:es)) = d2Cnt j (remPrimLin (remUltCol (TAB (l,c) ct)))}\\
+				in TAB (l,1) (((toBool (ft (elemXinY 1 c ct)) j):e):es)
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujas colunas representam as diagonais à esquerda da diagonal $\nwarrow$ do tabuleiro inicial\\}
+				{\tt
+				d2Esq::Bool->Tabuleiro->Tabuleiro\\
+				d2Esq j (TAB (1,1) ct) = d2Cnt j (TAB (1,1) ct)\\
+				d2Esq j (TAB (l,c) ct) =\\
+				{\small let	(TAB (\_,\_) nt) = d2Esq j (remUltLin (remUltCol (TAB (l,c) ct)))}\\
+				;	(TAB (\_,\_) st) = d2Cnt j (TAB (l,c) ct)\\
+				in	(TAB (l,c) (nt++st))
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - devolve um tabuleiro cujas colunas representam as diagonais à direita da diagonal $\nwarrow$ do tabuleiro inicial\\}
+				{\tt
+				d2Dir::Bool->Tabuleiro->Tabuleiro\\
+				d2Dir j (TAB (1,1) ct) = d2Cnt j (TAB (1,1) ct)\\
+				d2Dir j (TAB (l,c) ct) =\\
+				{\small let (TAB (\_,\_) nt) = d2Dir j (remPrimLin (remPrimCol (TAB (l,c) ct)))}\\
+				;	(TAB (\_,\_) st) = d2Cnt j (TAB (l,c) ct)\\
+				in	(TAB (l,c) (st++nt))
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - calcula a pontuação das diagonais $\nwarrow$ de um tabuleiro\\}
+				{\tt
+				pntsD2::Bool->Tabuleiro->Int\\
+				pntsD2 j t = pontosColuna j (diag2 j t)
+				}
+			\end{quote}
+\chapter{Jogo}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 5\\
+			Defina o programa que gere um jogo, aceitando alternadamente as jogadas de dois jogadores e terminando quando o tabuleiro fica cheio.
+			}
+		\end{center}
+	\end{quote}
+Ao iniciar um jogo de dois jogadores a primeira coisa que é pedido ao utilizador que defina as dimensões do seu tabuleiro. Tabuleiro definido, é
+sorteado qual o primeiro jogador e é gerado o nome do ficheiro temporário. Tendo os dados necessários, é iniciado então o ciclo que permite as
+jogadas alternadamente.
+	\begin{quote}
+		{\small - - iniciar jogo (2 jogadores)\\}
+		{\tt
+		op2Jog::IO ()\\
+		op2Jog = do\\
+		\{ j <- rnd\\
+		; t <- getTab\\
+		; f <- genFP--	Gera o filePath\\
+		; putStrLn ""\\
+		; putStrLn " Iniciar jogo..."\\
+		; ciclo2Jog t 1 (j==1) f
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - inicia o ciclo a dois jogadores. recebe o tabuleiro actual, o turno seguinte, o próximo jogador e o nome do ficheiro temporário\\}
+		{\tt
+		ciclo2Jog::Tabuleiro->Turno->Jogador->String->IO ()\\
+		ciclo2Jog t k j f = do\\
+		\{ putStrLn (" "++(show k)++"o turno - jogador "++(bool2Str j))\\
+		; putStr " Em que coluna deseja jogar? "\\
+		; c <- getLine\\
+		; let nt = (jogar t (JOG j col) [])\\
+		  col = ((read c)::Int)\\
+		; if (valJog t (JOG j col))\\
+		then do\\
+		\{ putStrLn ""\\
+		; putStrLn (show nt)\\
+		; let pts1 = pntTotal True nt\\
+		; let pts2 = pntTotal False nt\\
+		; putStrLn "$\diagdown$n Pontuacao actual:"\\
+		; putStr " Jogador 1: "\\
+		; putStrLn (show pts1)\\
+		; putStr " Jogador 2: "\\
+		; putStrLn (show pts2)\\
+		; putStrLn ""\\
+		; gravaSegFile f nt (not j) (k+1) 2 0\\
+		; if tabCheio nt\\
+		then fim2Jog nt f\\
+		else ciclo2Jog nt (k+1) (not j) f\\
+		\}\\
+		else do\\
+		\{ putStrLn " Jogada invalida."\\
+		; ciclo2Jog t k j f\\
+		\}\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - verifica se o tabuleiro está cheio\\}
+		{\tt
+		tabCheio::Tabuleiro->Bool\\
+		tabCheio (TAB (l,1) ct) = not (colDisp (TAB (l,1) ct) 1)\\
+		tabCheio (TAB (l,c) ct) = (not (colDisp (TAB (l,c) ct) c))\\
+		\&\&(tabCheio (TAB (l,c-1) ct))
+		}
+	\end{quote}
+Tal como exigido no enunciado, o jogo termina quando o tabuleiro estiver cheio.
+	\begin{quote}
+		{\small - - finaliza o jogo (2jogadores). recebe o tabuleiro final e o nome do ficheiro temporário (para apagar)\\}
+		{\tt
+		fim2Jog::Tabuleiro->String->IO ()\\
+		fim2Jog t f = do\\
+		\{ putStrLn " Fim do Jogo"\\
+		; let pts1 = pntTotal True t\\
+		; let pts2 = pntTotal False t\\
+		; let r = if pts1>pts2 then 1 else (if pts2>pts1 then 2 else 0)\\
+		; let p = if r==1 then pts1 else pts2\\
+		; if r==0\\
+		then do putStrLn " O jogo acaba empatado."\\
+		else do	putStrLn (" Vence o jogador "++(show r))\\
+		; putStrLn (" Pontuacao final: "++(show p))\\
+		; putStrLn "$\diagdown$n pressione Enter para continuar$\diagdown$n"\\
+		; putStrLn (" A remover ficheiro temporario "++f)\\
+		; removeFile f\\
+		; putStrLn " Concluido...$\diagdown$n"\\
+		; if r==0\\
+		then do	\{ getLine\\
+		; main\\
+		\}\\
+		else do	\{ let TAB (l,c) \_ = t in gravaHstFile (l,c) p (r==1)\\
+		; getLine\\
+		; main\\
+		\}\\
+		\}
+		}
+	\end{quote}
+\chapter{Utilizador {\it versus} computador}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Tarefa 6\\
+			Defina um programa que implemente o comportamento de um jogador (que poderá ser
+			mais ou menos inteligente, dependendo do nível escolhido). Integre esse programa no
+			definido atrás, permitindo desta forma a um jogador jogar com o seu programa.
+			}
+		\end{center}
+	\end{quote}
+Um dos maiores desafios deste programa foi sem dúvida programar as jogadas do computador nos vários modos de dificuldade em que o computador
+pode jogar com o utilizador. Para resolver este problema optou-se por três modos de dificuldade diferentes, descritos no ponto seguinte.
+
+Respondendo especificamente à {\it Tarefa 6}, não foi criado um novo programa pois a estrutura do programa definido atrás permitiu integrar
+facilmente as novas funções no mesmo, permitindo assim que ambos os modos de jogo utilizassem as mesmas funções sem interferirem um com o outro.
+	\section{Níveis}
+		\subsection{Fácil}
+		Aquele em que o utilizador vence facilmente o computador. É utilizado um sistema aleatório para escolher a coluna onde o
+		computador joga, fazendo com que não haja coerência entre as jogadas, por forma a fazer um número reduzido de pontos.
+			\begin{quote}
+				{\small - - gera uma jogada (modo fácil)\\}
+				{\tt
+				jogaCompFcl::Tabuleiro->IO Jogada\\
+				jogaCompFcl t = do\\
+				\{ rn <- rndPlay t\\
+				; if valJog t (JOG False rn)\\
+				then return (JOG False rn)\\
+				else jogaCompFcl t
+				\}
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - gera um número entre 1 e o número de colunas existentes no tabuleiro\\}
+				{\tt
+				rndPlay::Tabuleiro -> IO Int\\
+				rndPlay (TAB (l,c) ct) = getStdRandom (randomR (1,c))
+				}
+			\end{quote}
+		\subsection{Difícil}
+		Onde é suposto que o computador jogue bastante bem para dificultar a vitória ao utilizador. O computador
+		verifica qual a coluna em que faz mais pontos e opta por jogar nessa coluna, de forma a efectuar o maior número de pontos.
+			\begin{quote}
+				{\small - - gera uma jogada (modo difícil) e transforma em IO\\}
+				{\tt
+				jogaCompDif::Tabuleiro->IO Jogada\\
+				jogaCompDif t = do\\
+				\{ let nj = jogaCompDifAux t (0,0)\\
+				in return nj\}
+				}
+			\end{quote}
+			\begin{quote}
+				{\small - - verifica em que coluna uma jogada vai gerar mais pontos e devolve uma jogada nessa coluna\\}
+				{\tt
+				jogaCompDifAux::Tabuleiro->(Int,Int)->Jogada\\
+				jogaCompDifAux (TAB (l,1) ct) (n,p) =\\
+				let pn = pntTotal False (jogar (TAB (l,1) ct) (JOG False 1) [])\\
+				in if (colDisp (TAB (l,1) ct) 1)\\
+				then if pn>=p \{\\
+				then (JOG False 1)\\
+				else (JOG False n)\}\\
+				else (JOG False n)\\\\
+				jogaCompDifAux (TAB (l,c) ct) (n,p) =\\
+				let pn = pntTotal False (jogar (TAB (l,c) ct) (JOG False c) [])\\
+				in if (colDisp (TAB (l,c) ct) c)\\
+				then if pn>=p \{\\
+				then jogaCompDifAux (TAB (l,c-1) ct) (c,pn)\\
+				else jogaCompDifAux (TAB (l,c-1) ct) (n,p)\}\\
+				else jogaCompDifAux (TAB (l,c-1) ct) (n,p)
+				}
+			\end{quote}
+		\subsection{Médio}
+		Em que o utilizador deve sentir mais dificuldade do que no modo Fácil, mas menor que no modo Difícil. Resolvemos a
+		situação com um número aleatório que é gerado, e através de uma condição, o computador joga no modo Fácil ou no modo Difícil
+		dependendo do número gerado.
+			\begin{quote}
+				{\small - - gera uma jogada (modo médio)\\}
+				{\tt
+				jogaCompMed::Tabuleiro->IO Jogada
+				jogaCompMed t = do
+				{ r <- rnd
+				; nj <- (if r==1 then jogaCompFcl t else jogaCompDif t)
+				; return nj
+				}
+				}
+			\end{quote}
+	\section{Fluxo de Jogo}
+	O fluxo de jogo é semelhante ao de dois jogadores. Após o utilizador definir a dificuldade desejada e o tamanho do tabuleiro
+	é iniciado o ciclo de jogo. A diferença neste ciclo é que quando for o turno do segundo jogador, já que as jogadas deste são
+	feitas pelo computador. À parte da própria jogada, difere também o facto do ficheiro temporário nunca ser actualizado por uma
+	jogada do computador (no modo fácil o computador é indiferente à coluna onde joga e no modo difícil a coluna será sempre a mesma).
+		\begin{quote}
+			{\small - - iniciar jogo (1 jogador)\\}
+			{\tt
+			op1Jog::IO()\\
+			op1Jog = do\\
+			\{ j <- rnd\\
+			; d <- mnuDific\\
+			; t <- getTab\\
+			; f <- genFP\\
+			; putStrLn ""\\
+			; putStrLn (show t)\\
+			; putStrLn ""\\
+			; putStrLn " Iniciar jogo..."\\
+			; ciclo1Jog t 1 (j==1) f d\\
+			\}
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - inicia o ciclo de 1 jogador. recebe o tabuleiro actual, o próximo turno, o próximo jogador, o nome do ficheiro temporário e a dificuldade\\}
+			{\tt
+			ciclo1Jog::Tabuleiro->Turno->Jogador->String->Int->IO ()\\
+			ciclo1Jog t k j f d = if j\\
+			then do\\
+			\{ putStrLn (" "++(show k)++"o turno")\\
+			; putStr "$\diagdown$n Em que coluna deseja jogar? "\\
+			; c <- getLine\\
+			; let col = (read c)::Int\\
+			; let nt = jogar t (JOG True col) []\\
+			; if (valJog t (JOG True col)) \{\\
+			then do \{ putStrLn ""\\
+			; putStrLn (show nt)\\
+			; let pts1 = pntTotal True nt\\
+			; let pts2 = pntTotal False nt\\
+			; putStrLn "$\diagdown$n Pontuacao actual:"\\
+			; putStr " Jogador 1: "\\
+			; putStrLn (show pts1)\\
+			; putStr " Jogador 2: "\\
+			; putStrLn (show pts2)\\
+			; putStrLn ""\\
+			; gravaSegFile f nt (not j) (k+1) 1 d\\
+			; if tabCheio nt \{\\
+			then fim1Jog nt f d\\
+			else ciclo1Jog nt (k+1) False f d \} \}\\
+			else do
+			\{ putStrLn " Jogada invalida."\\
+			; ciclo1Jog t k j f d\\
+			\} \}
+			\}
+			else do\\
+			\{ putStr ""	\\
+			; jogada <- case d of\\
+			1 -> jogaCompFcl t\\
+			2 -> jogaCompMed t\\
+			3 -> jogaCompDif t\\
+			; let nt = jogar t jogada []\\
+			; putStrLn ""\\
+			; putStrLn (show nt)\\
+			; let pts1 = pntTotal True nt\\
+			; let pts2 = pntTotal False nt\\
+			; putStrLn "$\diagdown$n Pontuacao actual:"\\
+			; putStr " Jogador 1: "\\
+			; putStrLn (show pts1)\\
+			; putStr " Jogador 2: "\\
+			; putStrLn (show pts2)\\
+			; putStrLn ""\\
+			; if tabCheio nt\\
+			then fim1Jog nt f d\\
+			else ciclo1Jog nt (k+1) True f d\\
+			\}
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - finaliza o jogo (1jogadores). recebe o tabuleiro final e o nome do ficheiro temporário (para apagar)\\}
+			{\tt
+			fim1Jog::Tabuleiro->String->Int->IO ()\\
+			fim1Jog t f d = do
+			\{ putStrLn " Fim do Jogo"\\
+			; let pts1 = pntTotal True t\\
+			; let pts2 = pntTotal False t\\
+			; let r = if pts1>pts2 then 1 else (if pts2>pts1 then 2 else 0)\\
+			; let p = if r==1 then pts1 else pts2\\
+			; if r==0\\
+			then do putStrLn " O jogo acaba empatado."\\
+			else do	putStrLn (" Vence "++(if r==1 then "o jogador" else "o computador"))\\
+			; putStrLn (" Pontuacao final: "++(show p))\\
+			; let dif = case d of\\
+			1 -> "Facil"\\
+			2 -> "Intermedio"\\
+			3 -> "Dificil"\\
+			; putStrLn (" Dificuldade: "++dif)\\
+			; putStrLn "$\diagdown$n pressione Enter para continuar$\diagdown$n"\\
+			; isItThere <- doesFileExist f\\
+			; if isItThere\\
+			then do\\
+			\{ putStrLn (" A remover ficheiro temporario "++f)\\
+			; removeFile f\\
+			; putStrLn " Concluido...$\diagdown$n"\\
+			\}\\
+			else putStrLn " Ficheiro temporario nao existente."\\
+			; if r==1\\
+			then do\\
+			\{ let TAB (l,c) \_ = t in gravaHstFile (l,c) p (r==1)\\
+			; getLine\\
+			; main\\
+			\}\\
+			else do\\
+			\{ getLine\\
+			; main\\
+			\}\\
+			\}\\
+			}
+		\end{quote}
+\chapter{Histórico}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Extra 2\\
+			Gerir uma tabela de resultados (histórico).
+			}
+		\end{center}
+	\end{quote}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Extra 3\\
+			Dar a possibilidade de gravar e recuperar de ficheiro um jogo\footnote{A gravação de um ficheiro de jogo será focada
+			apenas no capítulo seguinte.}/tabela de resultados.
+			}
+		\end{center}
+	\end{quote}
+De modo a permitir aos utilizadores consultar os resultados obtidos anteriormente, foi integrado no programa um histórico que mantém
+os dez últimos jogos. Este histórico é actualizado no final de cada jogo, somente se o vencedor for um utilizador. As informações mantidas
+neste histórico resumem-se às dimensões do tabuleiro utilizado, a pontuação obtida e o nome do jogador.
+	\begin{quote}
+		{\small - - grava o ficheiro de histórico. recebe as dimensões do Tabuleiro, a pontuação do vencedor, e o valor correspondente a este\\}
+		{\tt
+		gravaHstFile::(Int,Int)->Int->Jogador->IO ()\\
+		gravaHstFile (l,c) p j = do\\
+		\{ putStrLn " A analisar historico..."\\
+		; isHstThere <- doesFileExist "Segmentos\\historico.hst"\\
+		; if isHstThere\\
+		then do\\
+		\{ putStrLn " Ficheiro encontrado"\\
+		; inside <- verifHstFile\\
+		; if (length inside)>9\\
+		then gravaHstAux (l,c) p j (myNeck (lines inside))\\
+		else gravaHstAux (l,c) p j (lines inside)\\
+		\}\\									
+		else gravaHstAux (l,c) p j []\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - evita conflitos de permissões, mantendo a abertura do ficheiro numa função isolada\\}
+		{\tt
+		verifHstFile::IO String\\
+		verifHstFile = do\\
+		\{ inside <- readFile "Segmentos\\historico.hst"\\
+		; return inside\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - evita conflitos de permissões, mantendo a abertura do ficheiro numa função isolada\\}
+		{\tt
+		gravaHstAux::(Int,Int)->Int->Jogador->[String]->IO ()\\
+		gravaHstAux (l,c) p j ss = do\\
+		\{ putStr ("$\diagdown$n Parabens jogador "++(bool2Str j)\\
+		++". Insira o seu nome: ")\\
+		; nome <- getLine\\
+		; let strC =\\
+		if (length (show c))==2\\
+		then show c\\
+		else '0':(show c)\\
+		; let strL =\\
+		if (length (show l))==2\\
+		then show l\\
+		else '0':(show l)\\
+		; let strP = case length (show p) of\\
+		1 -> '0':'0':'0':(show p)\\
+		2 -> '0':'0':(show p)\\
+		3 -> '0':(show p)\\
+		4 -> (show p)\\
+		; putStrLn " A guardar registo..."\\
+		; writeFile "Segmentos\\historico.hst"\\
+		(unlines ((strC++strL++strP++nome):ss))\\
+		; putStrLn " Concluido..."\\
+		\}
+		}
+	\end{quote}
+Este histórico pode ser consultado nos menus do programa.
+	\begin{quote}
+		{\small - - lê um ficheiro de historico e escreve no ecra os registos encontrados\\}
+		{\tt
+		leHist::IO ()\\
+		leHist = do\\
+		\{ isItThere <- doesFileExist "Segmentos\\historico.hst"\\
+		; if isItThere\\
+		then do\\
+		\{ inside <- readFile "Segmentos\\historico.hst"\\
+		; if (length inside)>0\\
+		then do\\
+		\{ putStrLn " Encontrados registos...$\diagdown$n"\\
+		; let orgRcs = leHistAux (lines inside)\\
+		; escHist orgRcs 1\\
+		; getLine\\
+		; main\\
+		\}\\
+		else errHist\\
+		\}\\
+		else errHist\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - recebe uma lista de registos de um histórico e devolve uma lista com os mesmos registos devidamente organizados para serem utilizados\\}
+		{\tt
+		leHistAux::[String]->[(Int,Int,Int,String)]\\
+		leHistAux [] = []\\
+		leHistAux ((l1:l2:c1:c2:p1:p2:p3:p4:nome):rs) =\\
+		let	lin = (read [l1,l2])::Int\\
+		;	col = (read [c1,c2])::Int\\
+		;	pts = (read [p1,p2,p3,p4])::Int\\
+		in (lin,col,pts,nome):(leHistAux rs)
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - dada uma lista organizada de registos, escreve no ecrã os registos dessa lista\\}
+		{\tt
+		escHist::[(Int,Int,Int,String)]->Int->IO ()\\
+		escHist [] k = do\\
+		\{ putStrLn ("$\diagdown$n Lidos "++(show (k-1))\\
+		++" registos.$\diagdown$n pressione Enter para continuar$\diagdown$n")\\
+		\}\\
+		escHist ((l,c,p,nome):rs) k = do\\
+		\{ putStrLn ("$\diagdown$t"++(show k)++".$\diagdown$tLinhas: "++(show l))\\
+		; putStrLn ("$\diagdown$t$\diagdown$tColunas: "++(show c))\\
+		; putStrLn ("$\diagdown$t$\diagdown$tVencedor: "++nome++", com "\\
+		++(show p)++" pontos.$\diagdown$n")\\
+		; escHist rs (k+1)\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - mensagem de erro do histórico\\}
+		{\tt
+		errHist::IO ()\\
+		errHist = do\\
+		\{ putStrLn "$\diagdown$n$\diagdown$tNao existem registos no historico.$\diagdown$n"\\
+		; opRegisto;
+		\}
+		}
+	\end{quote}
+\chapter{Recuperação}
+	\begin{quote}
+		\begin{center}
+			{\it
+			Extra 3\\
+			Dar a possibilidade de gravar e recuperar de ficheiro um jogo/tabela de resultados.
+			}
+		\end{center}
+	\end{quote}
+Por forma a possibilitar aos utilizadores retomar um jogo no caso da execução do programa ser interrompida, no final do turno de cada utilizador
+é actualizado o ficheiro temporário correspondente a esse jogo.
+
+Os ficheiros são únicos para cada jogo. Constam neste o tipo de jogo a gravar, a dificuldade, as dimensões do tabuleiro, o próximo turno, o próximo
+jogador e o conteúdo do tabuleiro.
+	\begin{quote}
+		{\small - - grava o ficheiro temporário. recebe o nome do ficheiro, o tabuleiro a gravar, o próximo jogador, o próximo turno, o tipo de jogo a gravar (1 -> 1jogador, 2->2jogadores) e a dificuldade (se não for um jogo do tipo 1 é 0)\\}
+		{\tt
+		gravaSegFile::String->Tabuleiro->Jogador->Turno->Int->Int->IO ()\\
+		gravaSegFile f (TAB (l,c) ct) j trn tj d = do\\
+		\{ putStrLn " A gravar dados..."\\
+		; let strCt = map (foldr (++) []) (map (map bool2Str) ct)\\
+		; let strFinal = [(show tj),(show d),(show trn),(show j)\\
+		,(show l),(show c)]++strCt\\
+		; writeFile f (unlines strFinal)\\
+		; return ()\\
+		\}
+		}
+	\end{quote}
+Desta forma, os jogos podem ser retomados caso tenham sido interrompidos, permitindo aos utilizadores continuar o jogo no ponto em que este se encontrava.
+	\begin{quote}
+		{\small - - carregar jogo\\}
+		{\tt
+		opCarregarJogo::IO ()\\
+		opCarregarJogo = do\\
+		\{ putStrLn (unlines (mensagem 2))\\
+		; isItThere <- doesDirectoryExist "Segmentos"\\
+		; if isItThere\\
+		then do\\
+		\{ fileList <- getDirectoryContents "Segmentos"\\
+		; let myFiles = (filter isMyFile fileList)\\
+		; if (length myFiles)>0\\
+		then do\\
+		\{ escreveFich myFiles 1\\
+		; nrF <- opEscFich myFiles\\
+		; let Just nomeF = elemX myFiles nrF\\
+		; inside <- readFile ("Segmentos\\"++nomeF)\\
+		; let ct = map (map char2Bool) (tailFromX (lines inside) 6)\\
+		; let Just auxL = (elemX (lines inside) 5)\\
+		; let l = (read auxL)::Int\\
+		; let Just auxC = (elemX (lines inside) 6)\\
+		; let c = (read auxC)::Int\\
+		; let t = TAB (l,c) ct\\
+		; let Just auxTp = (elemX (lines inside) 1)\\
+		; let tipo = (read auxTp)::Int\\
+		; let Just auxDif = (elemX (lines inside) 2)\\
+		; let d = (read auxDif)::Int\\
+		; let Just trn = (elemX (lines inside) 3)\\
+		; let turno = (read trn)::Int\\
+		; let Just auxJ = (elemX (lines inside) 4)\\
+		; let j = (read auxJ)::Bool\\
+		; case tipo of\\
+		1 -> ciclo1Jog t turno j ("Segmentos\\"++nomeF) d\\
+		2 -> ciclo2Jog t turno j ("Segmentos\\"++nomeF)\\
+		\}\\
+		else errCarregar\\
+		\}\\
+		else errCarregar\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - mensagem de erro ao carregar jogo\\}
+		{\tt
+		errCarregar::IO ()\\
+		errCarregar = do\\
+		\{ putStrLn " Nao existem jogos guardados.\\
+		$\diagdown$n$\diagdown$n pressione Enter para continuar$\diagdown$n"\\
+		; getLine\\
+		; main\\
+		\}
+		}
+	\end{quote}
+	\begin{quote}
+		{\small - - função de escolha do ficheiro\\}
+		{\tt
+		opEscFich::[String]->IO Int\\
+		opEscFich fs = do
+		\{ putStr "$\diagdown$n Insira o numero do ficheiro que pretende carregar: "\\
+		; op <- getLine\\
+		; let nrF = (read op)::Int\\
+		; if (nrF>0)\&\&(nrF<=(length fs))\\
+		then return nrF\\
+		else do\\
+		\{ putStrLn "$\diagdown$n Opcao invalida. O numero escolhido nao corresponde a nenhum ficheiro"\\
+		; opEscFich fs\\
+		\}\\
+		\}
+		}
+	\end{quote}
+\chapter{Outras funções}
+Entre as funções criadas, destacam-se algumas cuja utilidade permitiu facilitar a criação do restante código do programa.
+	\section{{\it desTab}}
+		\begin{quote}
+			{\small - - desenha o tabuleiro no ecrã\\}
+			{\tt
+			desTab::Tabuleiro->String\\
+			desTab (TAB (l,c) ct) =\\
+			let\\
+			\{	nr	= if l<10 then " 0"++(show l) else " "++(show l)\\
+			;	line = nr++"|"++(desLinha (TAB (l,c) ct))++"|$\diagdown$n"\\
+			\}\\
+			in	if l==1\\
+			then line++(desCoord (TAB (l,c) ct))\\
+			else line++(desTab (TAB (l-1,c) ct))\\
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - desenha a última linha do tabuleiro (sendo a última linha a definida na dimensão do mesmo)\\}
+			{\tt
+			desLinha::Tabuleiro->String\\
+			desLinha (TAB (l,1) ct) = peca (elemXinY l 1 ct)\\
+			desLinha (TAB (l,c) ct) =\\
+			(desLinha (TAB (l,c-1) ct))++"|"++peca (elemXinY l c ct)
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - associa a cada bool a peca do jogador correspondente (e um espaço vazio na ausência de peça)\\}
+			{\tt
+			peca::Maybe Bool->String\\
+			peca (Just True) = "OO"\\
+			peca (Just False) = "XX"\\
+			peca Nothing = "  "
+			}
+		\end{quote}
+		\begin{quote}
+			{\small - - desenha a linha das coordenadas horizontais\\}
+			{\tt
+			desCoord::Tabuleiro->String\\
+			desCoord (TAB (\_,1) ct) = "\verb+    +01 "\\
+			desCoord (TAB (l,c) ct)\\
+			| c<10 = (desCoord (TAB (l,c-1) ct))++"0"++(show c)++" "\\
+			| otherwise = (desCoord (TAB (l,c-1) ct))++" "++(show c)
+			}
+		\end{quote}
+	A função desTab é a função elaborada para mostrar aos jogadores o tabuleiro actual, de forma a tornar o jogo mais intuitivo.
+	A instância de tabuleiro para a classe {\tt Show} é definida utilizando esta função.
+	\section{{\it elemXinY}}
+		\begin{quote}
+			{\small - - devolve o elemento da linha X na coluna Y\\}
+			{\tt
+			elemXinY::Int->Int->Conteudo->Maybe Bool\\
+			elemXinY \_ \_ [] = Nothing\\
+			elemXinY 1 1 ((e:es):cs) = Just e\\
+			elemXinY x 1 ((e:es):cs) = elemXinY (x-1) 1 (es:cs)\\
+			elemXinY x y (c:cs) = elemXinY x (y-1) cs
+			}
+		\end{quote}
+	A função elemXinY foi desenhada para permitir manipular o conteudo de um tabuleiro como uma matriz. Dados como argumentos a linha,
+	a coluna e o conteúdo, devolve o valor associado a essas coordenadas. Caso não exista um valor nestas coordenadas, devolve
+	{\tt Nothing}.
+	
+	Desta forma, é possivel percorrer o tabuleiro todo variando apenas as coordenadas passadas. Esta função é utilizada em diversos
+	elementos do programa (cálculo da pontuação e desenho do tabuleiro no ecrã, por exemplo).
+\chapter{Anexos}
+	\section{Listagem do programa}
+	\begin{verbatim}
+module Main where
+
+-- Input/Output, permite a escrita de valores no ecra e a leitura do teclado
+import IO
+-- gerar números aleatórios
+import System.Random
+-- manipular caracteres e strings
+import Data.Char		
+-- data e hora
+import Data.Time
+-- directorios, permite a manipulação de pastas no sistema
+import Directory		
+
+type Jogador = Bool	-- True é o jogador1, False é o jogador2
+type Coluna = [Jogador]
+type Conteudo = [Coluna]
+-- Tabuleiro: TAB (Linhas,Colunas) Conteudo
+data Tabuleiro = TAB (Int,Int) Conteudo
+--	deriving (Show,Read,Eq)
+instance Show Tabuleiro where
+	-- show::Tabuleiro->String
+	show a = desTab a
+	
+-- Jogada: JOG Peca Coluna
+data Jogada = JOG Jogador Int
+--	deriving (Show,Read)
+type Turno = Int
+
+----------------------------------
+-- valida uma dimensão, para que o valor introduzido
+-- pelo utilizador seja um valor entre 1 e 99 inclusive
+valDim::Int->Bool
+valDim d = (d>0)&&(d<100)
+
+-- valida a jogada, devolvendo True se esta for válida,
+-- False se não for
+valJog::Tabuleiro->Jogada->Bool
+valJog (TAB (l,c) ct) (JOG _ k) = (k<=c)
+&&(colDisp (TAB (l,c) ct) k)
+
+-- recebe um tabuleiro e o número da coluna
+-- a testar e devolve True se a coluna não
+-- tiver cheia, False se tiver cheia
+colDisp::Tabuleiro->Int->Bool
+colDisp (TAB (l,_) (e:es)) 1 = (length e)<l
+colDisp (TAB (l,c) (e:es)) i = colDisp (TAB (l,c) es) (i-1)
+
+-- Verifica se o tabuleiro está cheio
+tabCheio::Tabuleiro->Bool
+tabCheio (TAB (l,1) ct) = not (colDisp (TAB (l,1) ct) 1)
+tabCheio (TAB (l,c) ct) = (not (colDisp (TAB (l,c) ct) c))
+&&(tabCheio (TAB (l,c-1) ct))
+
+-------------------------------------
+-- PONTUAÇÃO
+-- Calcula a pontuação actual do tabuleiro para
+-- um determinado jogador
+pntTotal::Bool->Tabuleiro->Int
+pntTotal _ (TAB (1,1) _) = 0
+pntTotal j t = (pntsD1 j t)+(pntsD2 j t)
++(pontosColuna j t)+(pontosLinha j t)
+
+-- Transforma um Tabuleiro com comprimento e largura
+-- quaisquer num tabuleiro quadrado de ordem igual
+-- à maior das duas dimensões
+quadTab::Tabuleiro->Tabuleiro
+quadTab (TAB (l,c) ct) =
+if l>c then TAB (l,l) (ct++[[]]) else TAB (c,c) ct
+
+-- Calcula a pontuação de uma lista de segmentos
+pontos :: [Int] -> Int
+pontos s = sum(map pontosAux s)
+
+-- Associa o número de peças de um segmento à
+-- pontuação correspondente
+pontosAux :: Int -> Int
+pontosAux n = if (n==0) then 0 else (n-1) + pontosAux (n-1)
+
+-- ///////////////////////
+-- DIAGONAIS /
+-- Forma o novo tabuleiro juntando a as diagonais
+-- à esquerda da diagonal principal do tabuleiro,
+-- esta e as diagonais à direita (diagonais /)
+diag1::Bool->Tabuleiro->Tabuleiro
+diag1 j (TAB (l,c) ct) = 	
+let	t = (quadTab (TAB (l,c) ct))
+							;	(TAB (n,_) _) = t
+							;	(TAB (_,_) ctEsq) = d1Esq j (remPrimLin (remUltCol t))
+							;	(TAB (_,_) ctCnt) = d1Cnt j t
+							;	(TAB (_,_) ctDir) = d1Dir j (remUltLin (remPrimCol t))
+							in	TAB (n,(2*n)-1) (ctEsq++ctCnt++ctDir)
+
+-- Devolve um Tabuleiro cujo conteudo é apenas
+-- uma coluna com a diagonal do tabuleiro original
+d1Cnt::Bool->Tabuleiro->Tabuleiro
+d1Cnt j (TAB (1,1) ct) = TAB (1,1) [[(toBool (ft (elemXinY 1 1 ct)) j)]]
+d1Cnt j (TAB (l,c) ct) =	
+let	(TAB (_,_) (e:es)) = d1Cnt j (remPrimLin (remPrimCol (TAB (l,c) ct)))
+							in TAB (l,1) (((toBool (ft (elemXinY 1 1 ct)) j):e):es)
+
+-- Devolve um Tabuleiro cujas colunas representam
+-- as diagonais à esquerda da diagonal / do tabuleiro inicial
+d1Esq::Bool->Tabuleiro->Tabuleiro
+d1Esq j (TAB (1,1) ct) = d1Cnt j (TAB (1,1) ct)
+d1Esq j (TAB (l,c) ct) = 	
+let	(TAB (_,_) nt) = d1Esq j (remPrimLin (remUltCol (TAB (l,c) ct)))
+							;	(TAB (_,_) st) = d1Cnt j (TAB (l,c) ct)
+							in	(TAB (l,c) (nt++st))
+
+-- Devolve um Tabuleiro cujas colunas representam
+-- as diagonais à direita da diagonal / do tabuleiro inicial
+d1Dir::Bool->Tabuleiro->Tabuleiro
+d1Dir j (TAB (1,1) ct) = d1Cnt j (TAB (1,1) ct)
+d1Dir j (TAB (l,c) ct) =	
+let (TAB (_,_) nt) = d1Dir j (remUltLin (remPrimCol (TAB (l,c) ct)))
+							;	(TAB (_,_) st) = d1Cnt j (TAB (l,c) ct)
+							in	(TAB (l,c) (st++nt))
+
+-- Calcula a pontuação das diagonais / de um tabuleiro
+pntsD1::Bool->Tabuleiro->Int
+pntsD1 j t = pontosColuna j (diag1 j t)
+
+-- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+--DIAGONAIS \
+-- Forma o novo tabuleiro juntando a as diagonais
+-- à esquerda da diagonal principal do tabuleiro,
+-- esta e as diagonais à direita (diagonais \)
+diag2::Bool->Tabuleiro->Tabuleiro
+diag2 j (TAB (l,c) ct) = 	
+let	t = (quadTab (TAB (l,c) ct))
+							;	(TAB (n,_) _) = t
+							;	(TAB (_,_) ctEsq) = d2Esq j (remUltLin (remUltCol t))
+							;	(TAB (_,_) ctCnt) = d2Cnt j t
+							;	(TAB (_,_) ctDir) = d2Dir j (remPrimLin (remPrimCol t))
+							in	TAB (n,(2*n)-1) (ctEsq++ctCnt++ctDir)
+
+-- Devolve um Tabuleiro cujo conteudo é apenas uma
+-- coluna com a diagonal \ do tabuleiro original
+d2Cnt::Bool->Tabuleiro->Tabuleiro
+d2Cnt j (TAB (1,1) ct) = TAB (1,1) [[(toBool (ft (elemXinY 1 1 ct)) j)]]
+d2Cnt j (TAB (l,c) ct) =	
+let	(TAB (_,_) (e:es)) = d2Cnt j (remPrimLin (remUltCol (TAB (l,c) ct)))
+							in TAB (l,1) (((toBool (ft (elemXinY 1 c ct)) j):e):es)
+
+-- Devolve um Tabuleiro cujas colunas representam
+-- as diagonais à esquerda da diagonal \ do tabuleiro inicial
+d2Esq::Bool->Tabuleiro->Tabuleiro
+d2Esq j (TAB (1,1) ct) = d2Cnt j (TAB (1,1) ct)
+d2Esq j (TAB (l,c) ct) = 	
+let	(TAB (_,_) nt) = d2Esq j (remUltLin (remUltCol (TAB (l,c) ct)))
+							;	(TAB (_,_) st) = d2Cnt j (TAB (l,c) ct)
+							in	(TAB (l,c) (nt++st))
+
+-- Devolve um Tabuleiro cujas colunas representam as
+-- diagonais à esquerda da diagonal \ do tabuleiro inicial
+d2Dir::Bool->Tabuleiro->Tabuleiro
+d2Dir j (TAB (1,1) ct) = d2Cnt j (TAB (1,1) ct)
+d2Dir j (TAB (l,c) ct) =	
+let (TAB (_,_) nt) = d2Dir j (remPrimLin (remPrimCol (TAB (l,c) ct)))
+							;	(TAB (_,_) st) = d2Cnt j (TAB (l,c) ct)
+							in	(TAB (l,c) (st++nt))
+
+-- Calcula a pontuação das diagonais \ de um tabuleiro
+pntsD2::Bool->Tabuleiro->Int
+pntsD2 j t = pontosColuna j (diag2 j t)
+
+--_____________________________
+--LINHAS
+-- Constrói uma lista com o número de peças de cada
+-- segmento de uma linha
+segLin::Bool->Int->Conteudo->Int->[Int]
+segLin _ _ [] t = [t]
+segLin j i (c:cs) t = 
+if (j==(toBool (ft(elemXinY i 1 (c:cs))) j))
+							 then (segLin j i cs (t+1))
+							 else (t:(segLin j i cs 0))
+
+-- Faz a soma dos pontos de todas as linhas
+pontosLinha::Bool->Tabuleiro->Int
+pontosLinha j (TAB (l,c) ct)
+| l==1 = pontos(segLin j l ct 0)
+| otherwise = pontos(segLin j l ct 0) + (pontosLinha j (TAB (l-1,c) ct))
+
+-- |||||||||||||||||||||||||||||||||
+-- COLUNAS
+-- Constrói uma lista com o número de peças de cada segmento de uma coluna
+segCol::Bool->Coluna->Int->[Int]
+segCol _ [] t = [t]
+segCol j (e:es) t = if (j==e)
+						then (segCol j es (t+1))
+						else t:(segCol j es 0)
+
+--Faz a soma dos pontos de todas as colunas
+pontosColuna::Bool->Tabuleiro->Int
+pontosColuna _ (TAB (_,_) []) = 0
+pontosColuna j (TAB (l,c) (m:ms)) = pontos(segCol j m 0)
+ + (pontosColuna j (TAB (l,c-1) ms))
+
+-----------------------------------------
+-- realiza uma jogada
+jogar::Tabuleiro->Jogada->Conteudo->Tabuleiro
+jogar (TAB (l,c) (e:es)) (JOG j 1) ct = 
+(TAB (l,c) (ct++((e++[j]):es)))
+jogar (TAB (l,c) (e:es)) (JOG j k) ct =
+jogar (TAB (l,c) es) (JOG j (k-1)) (ct++[e])
+
+-----------------------------------------
+-- desenha o tabuleiro no ecrã
+desTab::Tabuleiro->String
+desTab (TAB (l,c) ct) =	
+let	{	nr	= if l<10 then " 0"++(show l) else " "++(show l)
+							;	line = nr++"|"++(desLinha (TAB (l,c) ct))++"|\n"
+							}
+						in	if l==1
+							then line++(desCoord (TAB (l,c) ct))
+							else line++(desTab (TAB (l-1,c) ct))
+
+-- desenha a última linha do tabuleiro (sendo a última
+-- linha a definida na dimensão do mesmo)
+desLinha::Tabuleiro->String
+desLinha (TAB (l,1) ct) = peca (elemXinY l 1 ct)
+desLinha (TAB (l,c) ct) = 
+(desLinha (TAB (l,c-1) ct))++"|"++peca (elemXinY l c ct)
+
+-- associa a cada bool a peca do jogador correspondente
+-- (e um espaço vazio na ausência de peça)
+peca::Maybe Bool->String
+peca (Just True) = "OO"
+peca (Just False) = "XX"
+peca Nothing = "  "
+
+-- desenha a linha das coordenadas horizontais
+desCoord::Tabuleiro->String
+desCoord (TAB (_,1) ct) = "    01 "
+desCoord (TAB (l,c) ct)
+| c<10 = (desCoord (TAB (l,c-1) ct))++"0"++(show c)++" "
+						| otherwise = (desCoord (TAB (l,c-1) ct))++" "++(show c)
+
+-------------------------------------------
+-- outras funções
+-- devolve o elemento da linha X na coluna Y
+elemXinY::Int->Int->Conteudo->Maybe Bool
+elemXinY _ _ [] = Nothing
+elemXinY 1 1 ((e:es):cs) = Just e
+elemXinY x 1 ((e:es):cs) = elemXinY (x-1) 1 (es:cs)
+elemXinY x y (c:cs) = elemXinY x (y-1) cs
+
+-- devolve o x-ésimo elemento de uma lista
+elemX::[a]->Int->Maybe a
+elemX [] _ = Nothing
+elemX (e:es) 1 = Just e
+elemX (e:es) x = elemX es (x-1)
+
+-- texto automático do menu Ajuda e Informações
+autoTexto::Int->IO ()
+autoTexto op = do	{ putStrLn (unlines (mensagem op))
+					; getLine
+					; opAjudaInfo
+					}
+
+-- gera um número inteiro aleatório entre 1 e 2 inclusive
+rnd::IO Int
+rnd = getStdRandom (randomR (1,2))
+
+-- utilizada na interface gráfica. Associa a cada bool
+-- o número do jogador correspondente
+bool2Str::Bool->String
+bool2Str True = "1"
+bool2Str False = "2"
+
+-- Para preenchimento dos espaços vazios quando constrói
+-- um tabuleiro para calcular os segmentos de cada jogador.
+-- Recebe uma lista (para utilização nas funções) com
+-- um só bool, e outro bool (Jogador). Se for um espaço vazio
+-- (uma lista vazia), então será associado a esse espaço o
+-- valor contrário ao jogador para o qual se está a
+-- calcular a pontuação
+toBool::[Bool]->Bool-> Bool
+toBool [] True = False
+toBool [] False = True
+toBool [x] j = x==True
+
+-- False True. Converte um valor Maybe Bool para uma lista,
+-- vazia, ou apenas com o valor correspondente.
+ft::Maybe Bool->[Bool]
+ft x = if x==Nothing 
+		then []
+		else if x==Just True
+				then [True]
+				else [False]
+
+-- Remove o primeiro elemento da lista
+myTail::[a]->[a]
+myTail [] = []
+myTail (e:es) = es
+
+-- Remove o último elemento da lista
+myNeck::[a]->[a]
+myNeck [] = []
+myNeck (x:xs) = if (length (x:xs))>1 then x:(myNeck xs) else []
+
+-- Remove a primeira coluna
+remPrimCol::Tabuleiro->Tabuleiro
+remPrimCol (TAB (l,c) ct) = TAB (l,c-1) (myTail ct)
+
+-- Remove a última coluna
+remUltCol::Tabuleiro->Tabuleiro
+remUltCol (TAB  (l,c) ct) = TAB (l,c-1) (myNeck ct)
+
+-- Remove a primeira linha
+remPrimLin::Tabuleiro->Tabuleiro
+remPrimLin (TAB (l,c) ct) = TAB (l-1,c) (map myTail ct)
+
+-- Remove a última linha
+remUltLin::Tabuleiro->Tabuleiro
+remUltLin (TAB (l,c) ct) = TAB (l-1,c) (remLinX l ct)
+
+-- Remove a linha X de um conteudo
+remLinX::Int->Conteudo->Conteudo
+remLinX _ [] = []
+remLinX x (c:cs) =
+if (length c)>=x
+					then (myNeck c):(remLinX x cs)
+					else c:(remLinX x cs)
+
+-- Verifica se uma string é somente definida por números
+myNumber::String->Bool
+myNumber n = foldr (&&) True (map isDigit n)
+
+-- Remove o caracter da string
+tiraChar::String->Char->String
+tiraChar [] _ = []
+tiraChar (s:ss) c =
+if s==c
+then tiraChar ss c
+else s:(tiraChar ss c)
+
+-- devolve os primeiros caracteres da String
+-- até encontrar um determinado caracter
+leftUntil::String->Char->String
+leftUntil [] _ = []
+leftUntil (s:ss) c = if s==c then [] else s:(leftUntil ss c)
+
+-- Verifica se um ficheiro foi formado pelo jogo
+-- (se tem 12 caracteres ++ extensão ".seg")
+isMyFile::String->Bool
+isMyFile (_:_:_:_:_:_:_:_:_:_:_:_:".seg") = True
+isMyFile _ = False
+
+-- transforma o caracter inserido no ficheiro para o bool correspondente
+char2Bool::Char->Bool
+char2Bool '1' = True
+char2Bool '2' = False
+
+-- devolve a cauda de uma lista a partir da posição x
+tailFromX::[a]->Int->[a]
+tailFromX [] _ = []
+tailFromX (e:es) 1 = es
+tailFromX (e:es) x = tailFromX es (x-1)
+
+-- recebe o nome de um ficheiro e constrói um par com duas String,
+-- a hora e data
+formatHoraData::String->(String,String)
+formatHoraData ('S':'e':'g':'m':'e':'n':'t':'o':'s':'\\'
+:h1:h2:min1:min2:y1:y2:y3:y4:m1:m2:d1:d2:_) = 	
+let	hour = [h1,h2,':',min1,min2]
+															;	date = [d1,d2,'-',m1,m2,'-',y1,y2,y3,y4]
+															in	(hour,date)
+
+---------------------------------
+-- Interface gráfica
+-- menu inicial
+main::IO ()
+main = do 	{ putStr (unlines (mensagem 0))
+			; mnuMain
+			}
+
+mnuMain::IO ()
+mnuMain = do	{ op <- getLine
+				; case op of
+					'1':_ -> opIniciarJogo
+					'2':_ -> opCarregarJogo
+					'3':_ -> opRegisto
+					'4':_ -> opAjudaInfo
+					'0':_ -> do	{ putStrLn (unlines [""
+					," Funcao encerrada..."
+					," Escreva 'main' para iniciar o jogo."])
+								; return ()
+								}
+					otherwise -> opcaoInv 0
+				}
+
+-- Iniciar Jogo
+opIniciarJogo::IO ()
+opIniciarJogo = do	{ putStrLn (unlines (mensagem 1))
+					; mnuIniciarJogo
+					}
+
+mnuIniciarJogo = do { op <- getLine
+					; case op of
+						'1':_ -> op1Jog
+						'2':_ -> op2Jog
+						'0':_ -> main
+						otherwise -> opcaoInv 1
+					}
+
+--		Um jogador
+op1Jog::IO()
+op1Jog = do	{ j <- rnd
+			; d <- mnuDific
+			; t <- getTab
+			; f <- genFP--	Gera o filePath
+			; putStrLn ""
+			; putStrLn (show t)
+			; putStrLn ""
+			; putStrLn " Iniciar jogo..."
+			; ciclo1Jog t 1 (j==1) f d
+			}
+
+ciclo1Jog::Tabuleiro->Turno->Jogador->String->Int->IO ()
+ciclo1Jog t k j f d = if j
+						then do { putStrLn (" "++(show k)++"o turno")
+								; putStr "\n Em que coluna deseja jogar? "
+								; c <- getLine
+								; let col = (read c)::Int
+								; let nt = jogar t (JOG True col) []
+								; if (valJog t (JOG True col))
+									then do { putStrLn ""
+											; putStrLn (show nt)
+											; let pts1 = pntTotal True nt
+											; let pts2 = pntTotal False nt
+											; putStrLn "\n Pontuacao actual:"
+											; putStr " Jogador 1: "
+											; putStrLn (show pts1)
+											; putStr " Jogador 2: "
+											; putStrLn (show pts2)
+											; putStrLn ""
+											; gravaSegFile f nt (not j) (k+1) 1 d
+											; if tabCheio nt
+												then fim1Jog nt f d
+												else ciclo1Jog nt (k+1) False f d
+											}
+									else do	{ putStrLn " Jogada invalida."
+											; ciclo1Jog t k j f d
+											}
+								}
+						else do	{ putStr ""	
+								; jogada <- case d of
+												1 -> jogaCompFcl t
+												2 -> jogaCompMed t
+												3 -> jogaCompDif t
+								; let nt = jogar t jogada []
+								; putStrLn ""
+								; putStrLn (show nt)
+								; let pts1 = pntTotal True nt
+								; let pts2 = pntTotal False nt
+								; putStrLn "\n Pontuacao actual:"
+								; putStr " Jogador 1: "
+								; putStrLn (show pts1)
+								; putStr " Jogador 2: "
+								; putStrLn (show pts2)
+								; putStrLn ""
+								; if tabCheio nt
+											then fim1Jog nt f d
+											else ciclo1Jog nt (k+1) True f d
+								}
+
+fim1Jog::Tabuleiro->String->Int->IO ()
+fim1Jog t f d = do	{ putStrLn " Fim do Jogo"
+					; let pts1 = pntTotal True t
+					; let pts2 = pntTotal False t
+					; let r = if pts1>pts2 then 1 else (if pts2>pts1 then 2 else 0)
+					; let p = if r==1 then pts1 else pts2
+					; if r==0
+						then do putStrLn " O jogo acaba empatado."
+						else do	putStrLn (" Vence "++(if r==1 then "o jogador" else "o computador"))
+					; putStrLn (" Pontuacao final: "++(show p))
+					; let dif = case d of
+									1 -> "Facil"
+									2 -> "Intermedio"
+									3 -> "Dificil"
+					; putStrLn (" Dificuldade: "++dif)
+					; putStrLn "\n pressione Enter para continuar\n"
+					; isItThere <- doesFileExist f
+					; if isItThere
+						then do	{ putStrLn (" A remover ficheiro temporario "++f)
+								; removeFile f
+								; putStrLn " Concluido...\n"
+								}
+						else putStrLn " Ficheiro temporario nao existente."
+					; if r==1
+						then do	{ let TAB (l,c) _ = t in gravaHstFile (l,c) p (r==1)
+								; getLine
+								; main
+								}
+						else do	{ getLine
+								; main
+								}
+					}
+
+
+mnuDific::IO Int
+mnuDific = do	{ putStr (unlines (mensagem 11))
+				; d <- getDific
+				; return d
+				}
+
+getDific::IO Int
+getDific = do	{ op <- getLine
+				; case op of
+					'1':_ -> return 1
+					'2':_ -> return 2
+					'3':_ -> return 3
+					'0':_ -> return 0
+					otherwise -> do	{ putStrLn "\n Opcao Invalida"
+									; getDific
+									}
+				}
+
+jogaCompFcl::Tabuleiro->IO Jogada
+jogaCompFcl t = do	{ rn <- rndPlay t
+					; if valJog t (JOG False rn)
+						then return (JOG False rn)
+						else jogaCompFcl t
+					}
+
+rndPlay::Tabuleiro -> IO Int
+rndPlay (TAB (l,c) ct) = getStdRandom (randomR (1,c))
+
+jogaCompMed::Tabuleiro->IO Jogada
+jogaCompMed t = do	{ r <- rnd
+					; nj <- (if r==1 then jogaCompFcl t else jogaCompDif t)
+					; return nj
+					}
+
+jogaCompDif::Tabuleiro->IO Jogada
+jogaCompDif t = do	{ let nj = jogaCompDifAux t (0,0)
+					  in return nj
+					}
+
+jogaCompDifAux::Tabuleiro->(Int,Int)->Jogada
+jogaCompDifAux (TAB (l,1) ct) (n,p) = 
+								let pn = pntTotal False (jogar (TAB (l,1) ct) (JOG False 1) [])
+								in if (colDisp (TAB (l,1) ct) 1)
+									then if pn>=p
+											then (JOG False 1)
+											else (JOG False n)
+									else (JOG False n)
+jogaCompDifAux (TAB (l,c) ct) (n,p) =
+								let pn = pntTotal False (jogar (TAB (l,c) ct) (JOG False c) [])
+								in if (colDisp (TAB (l,c) ct) c)
+									then if pn>=p
+											then jogaCompDifAux (TAB (l,c-1) ct) (c,pn)
+											else jogaCompDifAux (TAB (l,c-1) ct) (n,p)
+									else jogaCompDifAux (TAB (l,c-1) ct) (n,p)
+
+
+--		Dois Jogadores
+op2Jog::IO ()
+op2Jog = do	{ j <- rnd
+			; t <- getTab
+			; f <- genFP--	Gera o filePath
+			; putStrLn ""
+			; putStrLn " Iniciar jogo..."
+			; ciclo2Jog t 1 (j==1) f
+			}
+
+-- Inicia o ciclo a dois jogadores. Recebe o tabuleiro actual,
+-- o turno seguinte, o próximo jogador e o nome do ficheiro temporário
+ciclo2Jog::Tabuleiro->Turno->Jogador->String->IO ()
+ciclo2Jog t k j f = do	
+						{ putStrLn (" "++(show k)++"o turno - jogador "++(bool2Str j))
+						; putStr " Em que coluna deseja jogar? "
+						; c <- getLine
+						; let nt = (jogar t (JOG j col) [])
+						      col = ((read c)::Int)
+						; if (valJog t (JOG j col))
+							then do { putStrLn ""
+									; putStrLn (show nt)
+									; let pts1 = pntTotal True nt
+									; let pts2 = pntTotal False nt
+									; putStrLn "\n Pontuacao actual:"
+									; putStr " Jogador 1: "
+									; putStrLn (show pts1)
+									; putStr " Jogador 2: "
+									; putStrLn (show pts2)
+									; putStrLn ""
+									; gravaSegFile f nt (not j) (k+1) 2 0
+									; if tabCheio nt
+										then fim2Jog nt f
+										else ciclo2Jog nt (k+1) (not j) f
+									}
+							else do	{ putStrLn " Jogada invalida."
+									; ciclo2Jog t k j f
+									}
+						}
+
+-- Finaliza o jogo (2jogadores). Recebe o tabuleiro final
+-- e o nome do ficheiro temporário (para apagar)
+fim2Jog::Tabuleiro->String->IO ()
+fim2Jog t f = do	{ putStrLn " Fim do Jogo"
+					; let pts1 = pntTotal True t
+					; let pts2 = pntTotal False t
+					; let r = if pts1>pts2 then 1 else (if pts2>pts1 then 2 else 0)
+					; let p = if r==1 then pts1 else pts2
+					; if r==0
+						then do putStrLn " O jogo acaba empatado."
+						else do	putStrLn (" Vence o jogador "++(show r))
+					; putStrLn (" Pontuacao final: "++(show p))
+					; putStrLn "\n pressione Enter para continuar\n"
+					; putStrLn (" A remover ficheiro temporario "++f)
+					; removeFile f
+					; putStrLn " Concluido...\n"
+					; if r==0
+						then do	{ getLine
+								; main
+								}
+						else do	{ let TAB (l,c) _ = t in gravaHstFile (l,c) p (r==1)
+								; getLine
+								; main
+								}
+					}
+
+-- Carregar Jogo
+opCarregarJogo::IO ()
+opCarregarJogo = do	{ putStrLn (unlines (mensagem 2))
+					; isItThere <- doesDirectoryExist "Segmentos"
+					; if isItThere
+						then do	{ fileList <- getDirectoryContents "Segmentos"
+								; let myFiles = (filter isMyFile fileList)
+								; if (length myFiles)>0
+									then do	{ escreveFich myFiles 1
+											; nrF <- opEscFich myFiles
+											; let Just nomeF = elemX myFiles nrF
+											; inside <- readFile ("Segmentos\\"++nomeF)
+											; let ct = map (map char2Bool) (tailFromX (lines inside) 6)
+											; let Just auxL = (elemX (lines inside) 5)
+											; let l = (read auxL)::Int
+											; let Just auxC = (elemX (lines inside) 6)
+											; let c = (read auxC)::Int
+											; let t = TAB (l,c) ct
+											; let Just auxTp = (elemX (lines inside) 1)
+											; let tipo = (read auxTp)::Int
+											; let Just auxDif = (elemX (lines inside) 2)
+											; let d = (read auxDif)::Int
+											; let Just trn = (elemX (lines inside) 3)
+											; let turno = (read trn)::Int
+											; let Just auxJ = (elemX (lines inside) 4)
+											; let j = (read auxJ)::Bool
+											; case tipo of
+												1 -> ciclo1Jog t turno j ("Segmentos\\"++nomeF) d
+												2 -> ciclo2Jog t turno j ("Segmentos\\"++nomeF)
+											}
+									else errCarregar
+								}
+						else errCarregar
+					}
+
+errCarregar::IO ()
+errCarregar = do	
+					{ putStrLn " Nao existem jogos guardados.
+					\n\n pressione Enter para continuar\n"
+					; getLine
+					; main
+					}
+
+opEscFich::[String]->IO Int
+opEscFich fs = do	
+{ putStr "\n Insira o numero do ficheiro que pretende carregar: "
+					; op <- getLine
+					; let nrF = (read op)::Int
+					; if (nrF>0)&&(nrF<=(length fs))
+						then return nrF
+						else do	
+								{ putStrLn "\n Opcao invalida. O numero escolhido
+								nao corresponde a nenhum ficheiro"
+								; opEscFich fs
+								}
+					}
+
+-- Registo
+opRegisto::IO ()
+opRegisto = do	{ putStr (unlines (mensagem 3))
+				; mnuRegisto
+				}
+
+mnuRegisto = do	{ op <- getLine
+				; case op of
+					'1':_ -> leHist
+					'0':_ -> main
+				}
+
+-- lê um ficheiro de historico e escreve no ecra os registos encontrados
+leHist::IO ()
+leHist = do	{ isItThere <- doesFileExist "Segmentos\\historico.hst"
+			; if isItThere
+				then do	{ inside <- readFile "Segmentos\\historico.hst"
+						; if (length inside)>0
+							then do	{ putStrLn " Encontrados registos...\n"
+									; let orgRcs = leHistAux (lines inside)
+									; escHist orgRcs 1
+									; getLine
+									; main
+									}
+							else errHist
+						}
+				else errHist
+			}
+
+-- recebe uma lista de registos de um histórico e devolve uma lista
+-- com os mesmos registos devidamente organizados para serem utilizados
+leHistAux::[String]->[(Int,Int,Int,String)]
+leHistAux [] = []
+leHistAux ((l1:l2:c1:c2:p1:p2:p3:p4:nome):rs) = 
+let	lin = (read [l1,l2])::Int
+												;	col = (read [c1,c2])::Int
+												;	pts = (read [p1,p2,p3,p4])::Int
+												in (lin,col,pts,nome):(leHistAux rs)
+
+-- dada uma lista organizada de registos, escreve no ecrã os registos dessa lista
+escHist::[(Int,Int,Int,String)]->Int->IO ()
+escHist [] k =
+do	{ putStrLn ("\n Lidos "++(show (k-1))
+++" registos.\n pressione Enter para continuar\n")
+					}
+escHist ((l,c,p,nome):rs) k =
+do	{ putStrLn ("\t"++(show k)++".\tLinhas: "++(show l))
+									; putStrLn ("\t\tColunas: "++(show c))
+									; putStrLn ("\t\tVencedor: "++nome++", com "++(show p)++" pontos.\n")
+									; escHist rs (k+1)
+									}
+
+-- mensagem de erro do histórico
+errHist::IO ()
+errHist = do	{ putStrLn "\n\tNao existem registos no historico.\n"
+				; opRegisto;
+				}
+
+-- Ajuda e Informações
+opAjudaInfo::IO ()
+opAjudaInfo = do	{ putStrLn (unlines (mensagem 4))
+					; mnuAjudaInfo
+					}
+mnuAjudaInfo::IO ()
+mnuAjudaInfo = do	{ op <- getLine
+					; case op of
+						'1':_ -> autoTexto 41
+						'2':_ -> autoTexto 42
+						'5':_ -> autoTexto 45
+						'0':_ -> main
+						otherwise -> opcaoInv 3
+					}
+
+-- Grava o ficheiro temporário. Recebe o nome do ficheiro,
+-- o tabuleiro a gravar, o próximo jogador, o próximo turno,
+-- o tipo de jogo a gravar (1 -> 1jogador, 2->2jogadores) e
+-- a dificuldade (se não for um jogo do tipo 1 é 0)
+gravaSegFile::String->Tabuleiro->Jogador->Turno->Int->Int->IO ()
+gravaSegFile f (TAB (l,c) ct) j trn tj d = do	{ putStrLn " A gravar dados..."
+												; let strCt = map (foldr (++) []) (map (map bool2Str) ct)
+												; let strFinal = [(show tj),(show d),(show trn),(show j),(show l),(show c)]++strCt
+												; writeFile f (unlines strFinal)
+												; return ()
+												}
+
+-- Grava o ficheiro de histórico. Recebe as dimensões do Tabuleiro, a pontuação
+-- do vencedor, e o valor correspondente a este
+gravaHstFile::(Int,Int)->Int->Jogador->IO ()
+gravaHstFile (l,c) p j = do	{ putStrLn " A analisar historico..."
+							; isHstThere <- doesFileExist "Segmentos\\historico.hst"
+							; if isHstThere
+								then do	{ putStrLn " Ficheiro encontrado"
+										; inside <- verifHstFile
+										; if (length inside)>9
+											then gravaHstAux (l,c) p j (myNeck (lines inside))
+											else gravaHstAux (l,c) p j (lines inside)
+										}										
+								else gravaHstAux (l,c) p j []
+							}
+
+verifHstFile::IO String
+verifHstFile = do	{ inside <- readFile "Segmentos\\historico.hst"
+					; return inside
+					}
+
+gravaHstAux::(Int,Int)->Int->Jogador->[String]->IO ()
+gravaHstAux (l,c) p j ss = do	{ putStr ("\n Parabens jogador "++(bool2Str j)
+								++". Insira o seu nome: ")
+								; nome <- getLine
+								; let strC = if (length (show c))==2 then show c else '0':(show c)
+								; let strL = if (length (show l))==2 then show l else '0':(show l)
+								; let strP = case length (show p) of
+												1 -> '0':'0':'0':(show p)
+												2 -> '0':'0':(show p)
+												3 -> '0':(show p)
+												4 -> (show p)
+								; putStrLn " A guardar registo..."
+								; writeFile "Segmentos\\historico.hst" (unlines ((strC++strL++strP++nome):ss))
+								; putStrLn " Concluido..."
+								}
+-------------------------------------------------
+-- menus
+-- devolve o texto de erro e repete a funcao que recebe a opcao
+opcaoInv::Int->IO ()
+opcaoInv op = do	{ putStrLn " Opcao invalida"
+					; case op of
+						0 -> mnuMain
+						1 -> mnuIniciarJogo
+						3 -> mnuAjudaInfo
+					}
+
+-- constroi o tabuleiro inicial
+getTab::IO Tabuleiro
+getTab = do	{ putStrLn " Defina a dimensao do tabuleiro"
+			; l <- getDim True
+			; c <- getDim False
+			; return (TAB (l,c) (fazerCont c))
+			}
+
+-- imprime o texto correspondente e pede as dimensoes do tabuleiro
+getDim::Bool->IO Int
+getDim a = do 	{ if a
+						then putStr " Numero de linhas:"
+						else putStr " Numero de colunas:"
+				; d <- getLine
+				; let dim = if (myNumber d)
+								then ((read d)::Int)
+								else 0
+				; if (valDim dim)&&(dim/=0)
+					then (return dim)
+					else do	{ putStrLn " Opcao invalida\n"
+							; getDim a
+							}
+				}
+
+-- gera o nome do ficheiro
+genFP::IO String
+genFP = do	{ putStrLn " A iniciar ficheiro temporario..."
+			; now <- getCurrentTime
+			; let strData = tiraChar (show (utctDay now)) '-'
+			; let auxStrMin = leftUntil (show ((utctDayTime now)/60)) '.'
+			; let intMin = (read auxStrMin)::Int
+			; let (horas,minutos) = divMod intMin 60
+			; let strHora = if (length (show horas))==2
+								then (show horas)
+								else '0':(show horas)
+			; let strMin = if (length (show minutos))==2
+								then (show minutos)
+								else '0':(show minutos)
+			; let id = strHora++strMin++strData
+			; dir <- (doesDirectoryExist "Segmentos")
+			; if dir
+				then putStr ""
+				else createDirectory  ("Segmentos")
+			; return ("Segmentos\\"++id++".seg")
+			}
+
+-- Escreve no ecra a lista dos ficheiros (recebe a lista de ficheiros e 1
+-- (acumulador para numerar as opções))
+escreveFich::[String]->Int->IO ()
+escreveFich [] _ = return ()
+escreveFich (s:ss) i = do	{ putStr ""
+							; let (h,d) = (formatHoraData ("Segmentos\\"++s))
+							; putStrLn (" "++(show i)++".\t"++s)
+							; putStrLn ("\t\tCriado em: "++d++" "++h)
+							; cont <- readFile ("Segmentos\\"++s)
+							; let contS = lines cont
+							; let (_:_:_:lin:col:_) = contS
+							; putStrLn ("\tLinhas: "++lin)
+							; putStrLn ("\tColunas: "++col)
+							; putStrLn ""
+							; escreveFich ss (i+1)
+							}
+
+-- cria o conteudo vazio inserindo uma lista vazia para cada coluna
+fazerCont::Int->Conteudo
+fazerCont c = if c==1 then [[]] else []:(fazerCont (c-1))
+
+-- textos utilizados no programa
+mensagem::Int->[String]
+mensagem op = case op of
+				0 ->	["",
+						"  _____   _____   _____   _     _   _____   _   _   _____   _____   _____",
+						" |  ___| |  ___| |  ___| | \\   / | |  ___| | | | | |_   _| |  _  | |  ___|",
+						" | |___  | |__   | | __  |  \\_/  | | |__   |  \\| |   | |   | | | | | |___",
+						" |___  | |  __|  | ||_ | | .   . | |  __|  |     |   | |   | | | | |___  |",
+						"  ___| | | |___  | |__|| | |\\_/| | | |___  | |\\  |   | |   | |_| |  ___| |",
+						" |_____| |_____| |_____| |_|   |_| |_____| |_| |_|   |_|   |_____| |_____|",
+						"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++",
+						" Bem-vindo,",
+						"",
+						" 1 -> Iniciar jogo",
+						" 2 -> Carregar jogo",
+						" 3 -> Registo",
+						" 4 -> Ajuda e Informacoes",
+						"",
+						" 0 -> Sair",
+						"",
+						" Escolha uma opcao: "]
+				1 ->	[""
+						," INICIAR JOGO+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+						,""
+						," 1 -> 1 Jogador vs Computador"
+						," 2 -> 2 Jogadores"
+						,""
+						," 0 -> Voltar ao menu anterior"
+						,""
+						," Escolha uma opcao: "]
+				11 ->	[""
+						," DIFICULDADE++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+						,""
+						," 1 -> Facil"
+						," 2 -> Intermedio"
+						," 3 -> Dificil"
+						,""
+						," Escolha uma opcao: "]
+				2 ->	["",
+						" CARREGAR JOGO++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++",
+						"",
+						" Jogos guardados:",
+						""]
+				3 ->	[""
+						," REGISTO++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+						,""
+						," 1 -> Historico (ultimos 10 jogos)"
+						,""
+						," 0 -> Voltar ao menu anterior"
+						,""
+						," Escolha uma opcao: "]
+				4 ->	["",
+						" AJUDA E INFORMACOES++++++++++++++++++++++++++++++++++++++++++++++++++++++",
+						" Escolha uma opcao",
+						"",
+						" >> INSTRUCOES >>",
+						" 1 -> Regras",
+						" 2 -> Pontuacao",
+						"",
+						" >> INFORMACOES >>",
+						" 5 -> Autores",
+						"",
+						" 0 -> Voltar ao menu anterior",
+						"",
+						" Escolha uma opcao: "]
+				41 ->	["",
+						" REGRAS+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++",
+						" O objectivo do jogo e criar a maior sequencia possivel de marcas corres-",
+						" pondentes ao jogador, sendo a pontuacao do jogador correspondente as se-",
+						" quencias por ele ou ela criadas, proporcional a quantidade de pecas na",
+						" sequencia.",
+						" O jogo so acaba quando todo o tabuleiro tiver sido preenchido. Vence o",
+						" jogador que obtiver maior pontuacao.",
+						"",
+						" pressione Enter para continuar",
+						""]
+				42 ->	["",
+						" PONTUACAO++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++",
+						" A pontuacao dum jogador depende das sequencias criadas por ele ou ela.",
+						" Sao validas quaisquer sequencias horizontais, verticais ou diagonais. O",
+						" valor de cada sequencia segue a seguinte tabela:",
+						"\t ____________________  ____________________",
+						"\t| Nr. pecas | Pontos || Nr. pecas | Pontos |",
+						"\t|-----------|--------||-----------|--------|",
+						"\t|  2 pecas  |    1   ||  7 pecas  |   21   |",
+						"\t|  3 pecas  |    3   ||  8 pecas  |   28   |",
+						"\t|  4 pecas  |    6   ||  9 pecas  |   36   |",
+						"\t|  5 pecas  |   10   || 10 pecas  |   45   |",
+						"\t|  6 pecas  |   15   || 11 pecas  |   55   |",
+						"\t|___________|________||___________|________|",
+						"",
+						"\tA pontuacao segue a sucessao:",
+						"\t\tp1=0",
+						"\t\tpn=(n-1)+p(n-1)",
+						"",
+						"",
+						" pressione Enter para continuar",
+						""]
+				45 ->	["",
+						" Uma criacao",
+						" ATUM - Alunos Talentosos da Universidade do Minho",
+						" Dezembro de 2008",
+						" Autores:",
+						"\t\tAndre Teixeira.....54753",
+						"\t\tFabio Morais.......54815",
+						"\t\tPedro Costa........54736",
+						"",
+						"",
+						" pressione Enter para continuar",
+						""]
+	\end{verbatim}
+\end{document}
